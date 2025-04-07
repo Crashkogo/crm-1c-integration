@@ -1,0 +1,89 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  login     String   @unique
+  password  String
+  name      String?
+  roles     Role[]   @relation("UserRoles")
+  tasks     Task[]   @relation("AssignedTasks")
+  user1C    User1C?  @relation("UserToUser1C") // Связь с User1C (опциональная)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model User1C {
+  id        Int      @id @default(autoincrement())
+  userId    Int?     @unique // Связь с пользователем сайта
+  user      User?    @relation("UserToUser1C", fields: [userId], references: [id])
+  externalId String  @unique // ID пользователя в 1С
+  name      String? // Имя пользователя из 1С
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Role {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique // "Admin", "Consultation", "ITS", "Implementation"
+  users     User[]   @relation("UserRoles")
+  createdAt DateTime @default(now())
+}
+
+model Task {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String?
+  status      String   // Например, "New", "In Progress", "Completed"
+  priority    Int?     // 1 - низкий, 5 - высокий
+  queueId     Int?
+  assignedTo  User?    @relation("AssignedTasks", fields: [assignedToId], references: [id])
+  assignedToId Int?
+  queue       Queue?   @relation(fields: [queueId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Queue {
+  id          Int      @id @default(autoincrement())
+  name        String   // Например, "Consultation Queue", "ITS Queue"
+  tasks       Task[]
+  createdAt   DateTime @default(now())
+}
+
+model SyncMetadata {
+  id        Int      @id @default(autoincrement())
+  entity    String   // Например, "Partners"
+  lastSync  DateTime // Дата последней синхронизации
+}
+
+model Partner {
+  id            Int            @id @default(autoincrement())
+  guid          String         @unique
+  name          String
+  inn           String?
+  mainManager   String?
+  contactPersons ContactPerson[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model ContactPerson {
+  id            Int      @id @default(autoincrement())
+  guid          String   @unique
+  partnerId     Int
+  partner       Partner  @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  name          String
+  position      String?
+  mobilePhone   String?
+  phone         String?
+  status        String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
